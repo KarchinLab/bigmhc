@@ -19,12 +19,25 @@ All data used in this research can be freely downloaded here: https://doi.org/10
 git clone https://github.com/KarchinLab/bigmhc.git
 ```
 
+
 ## Usage
 
 There are two executable Python scripts in src: `predict.py` and `retrain.py`.
 
 * `predict.py` is used for making predictions using BigMHC EL and BigMHC IM
 * `retrain.py` allows you to retrain (transfer learning) BigMHC on new data
+
+#### Examples
+
+From within the `src` dir, you can execute the below examples.
+
+```
+python predict.py -i=../data/example1.csv -m=el -t=2
+python predict.py -i=../data/example2.csv -m=el -a=HLA-A*02:02 -p=0 -c=0
+```
+
+Predictions will be written to `example1.csv.prd` and `example2.csv.prd`.
+
 
 #### Required Arguments
 * `-i` or `--input` input CSV file
