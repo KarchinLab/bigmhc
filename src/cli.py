@@ -131,7 +131,7 @@ def _parsePepcol(args : argparse.Namespace) -> argparse.Namespace:
 
 
 def _parseTgtcol(args : argparse.Namespace) -> argparse.Namespace:
-    if args.tgtcol is None or args.args.tgtcol >= 0:
+    if args.tgtcol is None or args.tgtcol >= 0:
         return args
     raise ValueError("tgtcol must be nonnegative")
 
