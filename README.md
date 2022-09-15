@@ -8,11 +8,30 @@ All data used in this research can be freely downloaded [here](https://doi.org/1
 
 ## Installation
 
-#### Install Dependencies
-* [pytorch](https://pytorch.org)
-* [pandas](https://pandas.pydata.org)
-* [scikit-learn](https://scikit-learn.org)
+All methods were run on Debian 11 using Linux 5.10.0-14-amd64, AMD EPYC 7443P, and RTX 3090.
 
+After installing dependencies, installing BigMHC takes less than one minute.
+
+#### Required Dependencies
+
+* [python](https://www.python.org/)
+  * Paper used version 3.9.12
+* [pytorch](https://pytorch.org)
+  * Paper used PyTorch built from source version 1.13.0
+* [pandas](https://pandas.pydata.org)
+  * Paper used version 1.4.2
+
+#### Optional Dependencies
+
+* [scikit-learn](https://scikit-learn.org)
+  * Paper used version 1.0.2
+  * Required when using the target column CLI argument
+* [cuda](https://developer.nvidia.com/cuda-downloads)
+  * Paper used version 11.7
+  * Required for GPU usage
+* [magma](https://developer.nvidia.com/magma)
+  * Paper used magma-cuda117 version 2.6.1
+  * Recommended for GPU usage
 
 #### Get the BigMHC Source
 ```
@@ -29,15 +48,14 @@ There are two executable Python scripts in src: `predict.py` and `retrain.py`.
 
 #### Examples
 
-From within the `src` dir, you can execute the below examples.
+From within the `src` dir, you can execute the below examples:
 
 ```
-python predict.py -i=../data/example1.csv -m=el -t=2
-python predict.py -i=../data/example2.csv -m=el -a=HLA-A*02:02 -p=0 -c=0
+python predict.py -i=../data/example1.csv -m=el -t=2 -d="cpu"
+python predict.py -i=../data/example2.csv -m=el -a=HLA-A*02:02 -p=0 -c=0 -d="cpu"
 ```
 
-Predictions will be written to `example1.csv.prd` and `example2.csv.prd`.
-
+Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the data folder. Execution takes about one second.
 
 #### Required Arguments
 * `-i` or `--input` input CSV file
