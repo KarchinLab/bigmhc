@@ -2,7 +2,7 @@
 
 """
 ------------------------------------------------------------------------
-Copyright 2022 Benjamin Alexander Albert [Karchin Lab]
+Copyright 2023 Benjamin Alexander Albert [Karchin Lab]
 All Rights Reserved
 
 BigMHC Academic License
@@ -12,6 +12,7 @@ dataset.py
 """
 
 import math
+import random
 
 import pandas as pd
 
@@ -19,7 +20,7 @@ import torch
 
 from typing import Union, Callable
 
-from mhcuid import mhcuid
+import mhcuid
 import encseq
 
 
@@ -60,9 +61,10 @@ class Dataset:
 
     def makebats(
             self,
-            maxbat:   int,
+            maxbat:    int,
             shuffle:  bool = False,
-            evendist: bool = True) -> None:
+            negfrac: float = 0,
+            evendist: bool = False) -> None:
         """
         Populates self.bats with references to self.df rows.
         self.df index is reset to be 0,1,2,...,len(self.df)-1.
@@ -76,13 +78,22 @@ class Dataset:
         ----------
 
         maxbat : int
-            maximum batch size in number of instances
+            Maximum batch size in number of instances
 
         shuffle : bool
-            True to randomly shuffle self.df before batching.
+            True to randomly shuffle self.df before and after batching
+
+        negfrac : float
+            Fraction of instances to be negative per batch.
+            Set to 0 to not use.
+            If negfrac is too high, then there may not be enough
+            negatives to evenly distribute across the batches
+            without sampling with replacement. In this case, the
+            negatives are evenly distributed across the batches.
 
         evendist : bool
-            True to attempt to make all batches of equal size.
+            True to make batches of equal size per peptide length grouping.
+            This is only applied if not using negfrac.
 
         Returns
         -------
@@ -94,18 +105,39 @@ class Dataset:
             self.df = self.df.sample(frac=1)
         self.df.reset_index(inplace=True, drop=True)
         grps = self.df.groupby("len")
-        for _, grp in grps:
-            if evendist:
+        if negfrac:
+            for _, grp in grps:
+                pos = grp.loc[grp["tgt"]==1,:]
+                neg = grp.loc[grp["tgt"]==0,:]
                 numbats = math.ceil(len(grp) / maxbat)
-                step = int(math.ceil(len(grp) / numbats))
-            else:
-                step = maxbat
-            idx1 = 0
-            idx2 = min(step, len(grp)) 
-            while idx1 < len(grp):
-                self.bats.append([x for x in grp.index[idx1:idx2]])
-                idx1 = idx2
-                idx2 = min(idx2 + step, len(grp))
+                steppos = int(math.ceil(len(pos) / numbats))
+                stepneg = int(math.ceil(len(neg) / numbats))
+                stepneg = int(min(stepneg, steppos / (1-negfrac) - steppos))
+                idx1pos = 0
+                idx2pos = steppos
+                idx1neg = 0
+                idx2neg = stepneg
+                while idx1pos < len(pos):
+                    self.bats.append(
+                        list(pos.index[idx1pos:idx2pos]) +
+                        list(neg.index[idx1neg:idx2neg]))
+                    idx1pos = idx2pos
+                    idx1neg = idx2neg
+                    idx2pos = min(idx2pos + steppos, len(pos))
+                    idx2neg = min(idx2neg + stepneg, len(neg))
+        else:
+            for _, grp in grps:
+                if evendist:
+                    numbats = math.ceil(len(grp) / maxbat)
+                    step = int(math.ceil(len(grp) / numbats))
+                else:
+                    step = maxbat
+                idx1 = 0
+                idx2 = min(step, len(grp)) 
+                while idx1 < len(grp):
+                    self.bats.append(list(grp.index[idx1:idx2]))
+                    idx1 = idx2
+                    idx2 = min(idx2 + step, len(grp))
         batidx = [0 for _ in range(len(self.bats[0]))]
         for x in range(1,len(self.bats)):
             self.bats[0].extend(self.bats[x])
@@ -248,7 +280,7 @@ class Dataset:
         df.insert(
             loc=0,
             column="uid",
-            value=df["mhc"].apply(mhcuid) + '_' + df["pep"])
+            value=df["mhc"].apply(mhcuid.mhcuid) + '_' + df["pep"])
         df.set_index(keys="uid", drop=True, inplace=True)
 
         if verbose:

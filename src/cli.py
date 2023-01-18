@@ -2,7 +2,7 @@
 
 """
 ------------------------------------------------------------------------
-Copyright 2022 Benjamin Alexander Albert [Karchin Lab]
+Copyright 2023 Benjamin Alexander Albert [Karchin Lab]
 All Rights Reserved
 
 BigMHC Academic License
@@ -10,9 +10,9 @@ BigMHC Academic License
 cli.py
 ------------------------------------------------------------------------
 
-Defines an ArgumentParser for predict.py and retrain.py CLIs along with
+Defines an ArgumentParser for predict.py and train.py CLIs along with
 helper functions for loading BigMHC models, accelerating them on GPUs,
-and loading data. Because predict.py and retrain.py share many common
+and loading data. Because predict.py and train.py share many common
 CLI arguments and their model and data loading are the same, the shared
 functions are defined here instead of duplicating in each executable script.
 """
@@ -29,8 +29,20 @@ import torch
 from typing import Union
 
 from bigmhc import BigMHC
+# from bigmhc_anchor import BigMHCAnchor
+# from bigmhc_bilstm import BigMHCBiLSTM
+
 from dataset import Dataset
 from mhcenc import MHCEncoder
+
+
+def _parseTransferLearn(args : argparse.Namespace) -> argparse.Namespace:
+    """
+    If model is provided, then set args.transferlearn to True
+    otherwise set args.transferlearn to False
+    """
+    args.transferlearn = (args.train and (args.models is not None))
+    return args
 
 
 def _parseModel(args : argparse.Namespace) -> argparse.Namespace:
@@ -40,11 +52,33 @@ def _parseModel(args : argparse.Namespace) -> argparse.Namespace:
     Lastly, convert relative paths to absolute paths so that
     using os.path.basename is more reliable
     """
-    if args.model == "el" or args.model == "im":
-        args.model = "bigmhc_" + args.model
-    if args.model == "bigmhc_el" or args.model == "bigmhc_im":
-        args.model = os.path.join("..", "models", args.model)
-    args.model = os.path.abspath(args.model)
+    if args.models is None:
+        if not args.train:
+            raise ValueError("Prediction requires models to be set")
+        return args 
+
+    elmodels = [
+        os.path.abspath(
+            os.path.join(
+                os.pardir,
+                "models",
+                "bat{}".format(int(2**x))))
+        for x in range(9,16)]
+
+    immodels = [os.path.join(x, "im") for x in elmodels]
+
+    models = list()
+    if args.models.strip().lower() == "el":
+        args.modelname = "BigMHC_EL"
+        models = elmodels
+    elif args.models.strip().lower() == "im":
+        args.modelname = "BigMHC_IM"
+        models = immodels
+    else:
+        args.modelname = "BigMHC"
+        for path in args.models.split(':'):
+            models.append(os.path.abspath(path))
+    args.models = models
     return args
 
 
@@ -70,7 +104,7 @@ def _parseDevices(args : argparse.Namespace) -> argparse.Namespace:
 
 def _parseMaxbat(args : argparse.Namespace) -> argparse.Namespace:
     """
-    An RTX 3090 with 24GB of global memory can use a batch size of 16384
+    An RTX 3090 with 24GB of global memory can use a batch size of 18000
     for making predictions, so we linearly scale this maximum batch size
     according to the minimum global memory of all requested devices.
     If using the CPU, then the total virtual memory is used for scaling.
@@ -82,21 +116,23 @@ def _parseMaxbat(args : argparse.Namespace) -> argparse.Namespace:
             for d in args.devices])
     else:
         minmem = psutil.virtual_memory().total
-    args.maxbat = int((minmem / (1024**3)) / 24 * 16384)
+    args.maxbat = int((minmem / (1024**3)) / 24 * 18000)
+    if len(args.devices):
+        args.maxbat *= len(args.devices)
     return args
+
 
 def _parseOut(args : argparse.Namespace) -> argparse.Namespace:
     """
-    if retraining without specifying an output directory
-    default to a new directory: retrain_<basemodel>_<time>
+    If transfer learning, out defaults to the models path.
+    If training from scratch, then an out dir must be set.
     """
-    if args.retrain and not args.out:
-        args.out = os.path.join(
-            "..",
-            "models",
-            "retrain_{}_{}".format(
-                os.path.basename(args.model),
-                int(time.time())))
+    if args.transferlearn:
+        if args.out is None:
+            args.out = args.models[0]
+    elif args.train and args.out is None:
+        raise ValueError(
+            "training from scratch requires a out arg to be set")
     return args
 
 
@@ -136,42 +172,27 @@ def _parseTgtcol(args : argparse.Namespace) -> argparse.Namespace:
     raise ValueError("tgtcol must be nonnegative")
 
 
-def _accelerateModel(
-    model : Union[BigMHC, torch.nn.parallel.DataParallel],
-    args : argparse.Namespace) -> Union[BigMHC, torch.nn.parallel.DataParallel]:
-    """
-    Based on args.devices, model is sent to either the CPU, a single GPU,
-    or multiple GPUs using Torch DataParallel. If using DataParallel,
-    the model is first pushed to the first GPU in the devices list.
-    """
-
-    if args.verbose:
-        print("sending model to device(s): {}".format(args.devices))
-    if isinstance(model, torch.nn.parallel.DataParallel):
-        model = model.module
-    if not len(args.devices):
-        return model.cpu()
-    model.to(args.devices[0])
-    if len(args.devices) == 1:
-        return model
-    return torch.nn.parallel.DataParallel(model, device_ids=args.devices)
-
-
-def _loadModel(args : argparse.Namespace) -> BigMHC:
+def _loadModels(args : argparse.Namespace) -> BigMHC:
     """
     Wrapper for BigMHC.load with optional verbose printing.
     Additionally sets model eval or train mode.
     """
-    if args.verbose:
-        print("loading model {}...".format(args.model), end="")
-    model = BigMHC.load(args.model)
-    if args.retrain:
-        model.train()
+
+    if args.models is None:
+        if args.verbose:
+            print("creating new model...", end="")
+        models = [BigMHC()]
+        if args.verbose:
+            print("done")
     else:
-        model.eval()
-    if args.verbose:
-        print("done")
-    return model
+        models = list()
+        for model in args.models:
+            if args.verbose:
+                print("loading model {}...".format(model), end="")
+            models.append(BigMHC.load(model))
+            if args.verbose:
+                print("done")
+    return models
 
 
 def _loadData(args : argparse.Namespace) -> Dataset:
@@ -191,18 +212,19 @@ def _loadData(args : argparse.Namespace) -> Dataset:
         mhcenc=mhcenc)
     data.makebats(
         args.maxbat,
-        shuffle=args.retrain,
-        evendist=args.retrain)
+        shuffle=args.train,
+        evendist=args.transferlearn)
     data = torch.utils.data.DataLoader(
         data,
         batch_size=None,
+        shuffle=args.train,
         num_workers=args.jobs,
         prefetch_factor=args.prefetch,
         persistent_workers=True)
     return data
 
 
-def parseArgs(retrain):
+def parseArgs(train):
 
     seed = 1
     random.seed(seed)
@@ -215,8 +237,8 @@ def parseArgs(retrain):
     parser = argparse.ArgumentParser()
 
     parser = argparse.ArgumentParser(
-        ("Retrain the final and penultimate layers of BigMHC"
-         "using a specified base model for transfer learning") if retrain else
+        ("Train BigMHC from scratch or just the final and penultimate layers"
+         "using a specified base model for transfer learning") if train else
         "Predict pMHC presentation or immunogenicity with BigMHC")
 
     parser.add_argument(
@@ -228,19 +250,19 @@ def parseArgs(retrain):
 
     parser.add_argument(
         "-m",
-        "--model",
+        "--models",
         type=str,
-        required=True,
+        required=False,
         help=("either \"el\" or \"im\" for presentation (eluted ligand)"
               "and immunogenicity prediction respectively."
-              "Or specify a path to a model directory"))
+              "Or specify a colon-delimited paths to model directories"))
 
     parser.add_argument(
         "-o",
         "--out",
         type=str,
         default=None,
-        help="path to dir in which to save retrained model" if retrain else
+        help="path to dir in which to save trained model" if train else
              ("path to file in which to save predictions."
               "If None, then predictions are saved to [INPUT].prd"))
 
@@ -248,7 +270,7 @@ def parseArgs(retrain):
         "-s",
         "--pseudoseqs",
         type=str,
-        default="../data/pseudoseqs.csv",
+        default=os.path.join(os.pardir, "data", "pseudoseqs.csv"),
         help="csv file mapping MHC sequence to one-hot encoding")
 
     parser.add_argument(
@@ -270,8 +292,9 @@ def parseArgs(retrain):
         "-b",
         "--maxbat",
         type=int,
-        default=1024 if retrain else None,
-        help="maxmum batch size (turn down if running out of memory)")
+        default=32 if train else None,
+        help=("maxmum batch size (turn down if running out of memory)."
+              "If None, we guess the max by the devices arg."))
 
     parser.add_argument(
         "-c",
@@ -302,7 +325,7 @@ def parseArgs(retrain):
         "--tgtcol",
         type=int,
         default=None,
-        required=retrain,
+        required=train,
         help=("zero-indexed column of the input file containing target values."
               "If making predictions, then model performance metrics"
               "are calculated using these target values as ground truth."))
@@ -321,13 +344,13 @@ def parseArgs(retrain):
         default=None,
         help="number of batches to prefetch per data loader worker")
 
-    if retrain:
+    if train:
 
         parser.add_argument(
             "-l",
             "--lr",
             type=float,
-            default=1e-4,
+            default=5e-5,
             help="optimizer learning rate")
 
         parser.add_argument(
@@ -335,7 +358,7 @@ def parseArgs(retrain):
             "--epochs",
             type=int,
             default=50,
-            help="number of retraining epochs")
+            help="number of training epochs")
 
     else:
 
@@ -348,8 +371,9 @@ def parseArgs(retrain):
 
     args = parser.parse_args()
 
-    args.retrain = retrain
+    args.train = train
 
+    args = _parseTransferLearn(args)
     args = _parseModel(args)
     args = _parseDevices(args)
     args = _parseMaxbat(args)
@@ -364,7 +388,6 @@ def parseArgs(retrain):
     args = _parsePrefetch(args)
 
     data  = _loadData(args)
-    model = _loadModel(args)
-    model = _accelerateModel(model, args)
+    models = _loadModels(args)
 
-    return args, data, model
+    return args, data, models

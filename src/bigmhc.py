@@ -2,7 +2,7 @@
 
 """
 ------------------------------------------------------------------------
-Copyright 2022 Benjamin Alexander Albert [Karchin Lab]
+Copyright 2023 Benjamin Alexander Albert [Karchin Lab]
 All Rights Reserved
 
 BigMHC Academic License
@@ -97,11 +97,7 @@ class BigMHC(torch.nn.Module):
             super().__init__()
             self.minpep = minpep
             self.enclen = enclen
-            self.narrowCells = torch.nn.ModuleList(
-                [AttentionLSTMCell(
-                    inp=2*hidlen*x + mhclen + enclen,
-                    out=hidlen) for x in range(ncells)])
-            self.wideCells  = torch.nn.ModuleList(
+            self.cells  = torch.nn.ModuleList(
                 [AttentionLSTMCell(
                     inp=2*hidlen*x + mhclen + (minpep*enclen),
                     out=hidlen) for x in range(ncells)])
@@ -119,22 +115,19 @@ class BigMHC(torch.nn.Module):
             return output
 
         def forward(self, mhc, pep):
-            narrowinp = self.buildInput(mhc, pep, 1)
-            wideinp   = self.buildInput(mhc, pep, self.minpep)
-            for idx in range(len(self.narrowCells)):
-                narrowout = self.narrowCells[idx](narrowinp)
-                wideout   = self.wideCells[idx](wideinp)
-                if idx < len(self.narrowCells)-1:
-                    narrowinp = torch.cat((narrowinp, narrowout), -1)
-                    wideinp   = torch.cat((wideinp,   wideout  ), -1)
-            return torch.cat((narrowout[:,-1,:], wideout[:,-1,:]),-1)
+            inp = self.buildInput(mhc, pep, self.minpep)
+            for idx in range(len(self.cells)):
+                out = self.cells[idx](inp)
+                if idx < len(self.cells)-1:
+                    inp = torch.cat((inp, out), -1)
+            return out[:,-1,:]
 
     class Condenser(torch.nn.Module):
         def __init__(self, mhclen, minpep, enclen, hidlen, layers):
             super().__init__()
             self.enclen = enclen
             self.act = torch.nn.Tanh()
-            inp = mhclen + (minpep*enclen) + hidlen*(4+layers)
+            inp = mhclen + (minpep*enclen) + hidlen*(2+layers)
             self.preAttentionDenseBlock = DenseBlock(
                 inp=inp,
                 out=hidlen,
@@ -150,16 +143,15 @@ class BigMHC(torch.nn.Module):
                 self.out.weight * attention,
                 mhc.bool()).reshape(mhc.shape[0],-1)
             return \
-                (torch.sigmoid(
-                    torch.sum(attention, dim=1) + self.out.bias),
+                (torch.sum(attention, dim=1) + self.out.bias,
                 attention)
 
     def __init__(
             self,
-            mhclen=388,
+            mhclen=414,
             minpep=8,
             enclen=20,
-            hidlen=512,
+            hidlen=1024,
             layers=2):
 
         super().__init__()
@@ -191,19 +183,82 @@ class BigMHC(torch.nn.Module):
             anchorOutput=self.anchorBlock(mhc,pep),
             lstmOutput=self.lstm(mhc,pep))
 
-    def save(self, fp):
+    @staticmethod
+    def accelerate(model, devices):
+        """
+        Based on devices arg, model is sent to either the CPU, a single GPU,
+        or multiple GPUs using Torch DataParallel. If using DataParallel,
+        the model is first pushed to the first GPU in the devices list.
+        """
+        if isinstance(model, torch.nn.parallel.DataParallel):
+            model = model.module
+        if not len(devices):
+            return model.cpu()
+        if len(devices) > 1:
+            model = torch.nn.parallel.DataParallel(model, device_ids=devices)
+        return model.to(devices[0])
+
+    @staticmethod
+    def decelerate(model):
+        """
+        Sends model to the CPU and returns the resulting model
+        """
+        if isinstance(model, torch.nn.parallel.DataParallel):
+            return model.module.cpu()
+        return model.cpu()
+
+    @staticmethod
+    def tllayers():
+        return [
+            "condenser.att.weight",
+            "condenser.att.bias",
+            "condenser.out.weight",
+            "condenser.out.bias"]
+
+    def save(self, fp, tl=False):
         if not os.path.exists(fp):
             os.makedirs(fp)
-        state = self.state_dict()
         for idx, (k,v) in enumerate(self.state_dict().items()):
-            torch.save(v, os.path.join(fp, "{}_{}".format(idx,k)))
+            # if not transfer learning save all layers
+            # otherwise, when transfer learning, only save newly learned layers
+            if not tl or k in BigMHC.tllayers():
+                torch.save(v, os.path.join(fp, "{}_{}.lyr".format(idx,k)))
 
     @staticmethod
     def load(fp):
-        state = []
-        for lyr in sorted(os.listdir(fp)):
-            name = lyr[lyr.index('_')+1:]
-            state.append((name, torch.load(os.path.join(fp,lyr))))
+
+        def _getlayers(fp):
+            # get all files ending with .lyr
+            layers = [f for f in os.listdir(fp) if f.endswith(".lyr")]
+            if not len(layers):
+                raise ValueError("Could not find .lyr files at: {}".format(fp))
+            # sort layers by idx where file names are formatted: idx_lyr.lyr
+            order  = {lyr:int(lyr[:lyr.index('_')]) for lyr in layers}
+            return sorted(layers, key=lambda lyr:order[lyr])
+        
+        # first assume fp points to a base model
+        layers = _getlayers(fp)
+        tllayers = list()
+
+        # if we loaded only transfer-learned layers,
+        # then we get the base model layers from the parent dir of fp
+        # and swap the file paths and loaded layers
+        if len(layers) == len(BigMHC.tllayers()):
+            tl = fp
+            fp = os.path.dirname(os.path.abspath(fp))
+            tllayers = layers
+            layers = _getlayers(fp)
+
+        state = list()
+        for lyr in layers:
+            if lyr in tllayers:
+                lyrpath = os.path.join(tl,lyr)
+            else:
+                lyrpath = os.path.join(fp,lyr)
+            state.append((lyr[lyr.index('_')+1:-4], torch.load(lyrpath)))
+
+        state = OrderedDict(state)
+
         model = BigMHC()
-        model.load_state_dict(OrderedDict(state))
+        model.load_state_dict(state)
         return model

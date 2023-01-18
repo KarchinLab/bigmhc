@@ -2,7 +2,7 @@
 
 """
 ------------------------------------------------------------------------
-Copyright 2022 Karchin Lab - All Rights Reserved
+Copyright 2023 Karchin Lab - All Rights Reserved
 
 license: BigMHC Academic License
 author: Benjamin Alexander Albert
