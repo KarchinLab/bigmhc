@@ -8,14 +8,14 @@ All data used in this research can be freely downloaded [here](https://doi.org/1
 
 ## Installation
 
-All methods were run on Debian 11 using Linux 5.10.0-14-amd64, AMD EPYC 7443P, and RTX 3090.
+All methods were run on Debian 11 using Linux 5.10.0-14-amd64, AMD EPYC 7443P, and four RTX 3090 GPUs.
 
 After installing dependencies, installing BigMHC takes less than one minute.
 
 #### Required Dependencies
 
 * [python](https://www.python.org/)
-  * Paper used version 3.9.12
+  * Paper used version 3.9.13
 * [pytorch](https://pytorch.org)
   * Paper used PyTorch built from source version 1.13.0
 * [pandas](https://pandas.pydata.org)
