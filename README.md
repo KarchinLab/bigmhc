@@ -8,11 +8,15 @@ All data used in this research can be freely downloaded [here](https://doi.org/1
 
 ## Installation
 
-All methods were run on Debian 11 using Linux 5.10.0-14-amd64, AMD EPYC 7443P, and four RTX 3090 GPUs.
+All methods were tested on Debian 11 using Linux 5.10.0-19-amd64, AMD EPYC 7443P, and four RTX 3090 GPUs.
 
-After installing dependencies, installing BigMHC takes less than one minute.
+After installing dependencies, install BigMHC by cloning this repository. The repository is about 5GB, so installation takes about 5 minutes depending on internet speed.
 
 #### Required Dependencies
+
+Execution is OS agnostic and does not require GPUs.
+
+Training models with large batch sizes (e.g. 32768) requires significant GPU memory (about 94 GB total). Transfer learning requires minimal GPU memory and can be reasonably conducted on a CPU.
 
 * [python](https://www.python.org/)
   * Paper used version 3.9.13
@@ -41,10 +45,10 @@ git clone https://github.com/KarchinLab/bigmhc.git
 
 ## Usage
 
-There are two executable Python scripts in src: `predict.py` and `retrain.py`.
+There are two executable Python scripts in src: `predict.py` and `train.py`.
 
 * `predict.py` is used for making predictions using BigMHC EL and BigMHC IM
-* `retrain.py` allows you to retrain (transfer learning) BigMHC on new data
+* `train.py` allows you to train or retrain (transfer learning) BigMHC on new data
 
 #### Examples
 
@@ -55,7 +59,7 @@ python predict.py -i=../data/example1.csv -m=el -t=2 -d="cpu"
 python predict.py -i=../data/example2.csv -m=el -a=HLA-A*02:02 -p=0 -c=0 -d="cpu"
 ```
 
-Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the data folder. Execution takes about one second.
+Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the data folder. Execution takes a few seconds. Compare your output with `example1.csv.cmp` and `example2.csv.cmp` respectively.
 
 #### Required Arguments
 * `-i` or `--input` input CSV file
@@ -67,11 +71,13 @@ Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the 
   * `im` or `bigmhc_im` to load BigMHC IM
   * Can be a path to a BigMHC model directory
 
-#### Required Argument for Retraining
+#### Required Argument for Training and Retraining
 * `-t` or `--tgtcol` column index of target values
   * Optional for `predict.py`
   * If using `predict.py`, this column is used to calculate performance metrics.
-  * If using `retrain.py`, elements in this column are considered ground truth values.
+  * If using `train.py`, elements in this column are considered ground truth values.
+* `-o` or `--out` output directory
+  * Directory to save model parameters for each epoch
 
 #### Input Formatting Arguments
 * `-a` or `--allele` allele name or allele column
@@ -85,8 +91,8 @@ Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the 
 * `-o` or `--out` output file or directory
   * If using `predict.py`, save CSV data to this file
     * Defaults to `input`.prd
-  * If using `retrain.py`, save the retrained BigMHC model to this directory
-    * Defaults to creating a new subdir in the `models` dir
+  * If using `train.py`, save the retrained BigMHC model to this directory
+    * If transfer learning, defaults to the base model dir
 * `-z` or `--saveatt` boolean indicating whether to save attention values
   * Only available for `predict.py`
   * Use `1` for true and `0` for false
@@ -105,11 +111,11 @@ Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the 
 * `-b` or `--maxbat` Maximum batch size
   * Turn this down if running out of memory
   * If using `predict.py`, defaults to a value that is estimated to fully occupy the device with the least memory
-  * If using `retrain.py`, defaults to `1024`
-* `-l` or `--lr` Adam optimizer learning rate
-  * Only available for `retrain.py`
+  * If using `train.py`, defaults to `32`
+* `-l` or `--lr` AdamW optimizer learning rate
+  * Only available for `train.py`
 * `-e` or `--epochs` number of epochs for transfer learning
-  * Only available for `retrain.py`
+  * Only available for `train.py`
 
 ## Contact (Gmail)
 
