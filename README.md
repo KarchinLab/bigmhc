@@ -6,9 +6,9 @@ See [the paper](https://doi.org/10.1101/2022.08.29.505690) for more information.
 
 All data used in this research can be freely downloaded [here](https://doi.org/10.17632/dvmz6pkzvb.1).
 
-## MAJOR UPDATE (January 19, 2023)
+## Major Update (January 19, 2023)
 
-Major updates have been made to the models, code, data, and preprint. Please pull the latest versions for using BigMHC.
+Major updates have been made to the models, code, data, and preprint. Please pull the latest versions for using BigMHC and note the revised training procedure.
 
 ## Installation
 
