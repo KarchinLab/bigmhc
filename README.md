@@ -4,7 +4,7 @@ BigMHC is a deep learning tool for predicting MHC-I (neo)epitope presentation an
 
 See [the paper](https://doi.org/10.1101/2022.08.29.505690) for more information.
 
-All data used in this research can be freely downloaded [here](https://doi.org/10.17632/dvmz6pkzvb.1).
+All data used in this research can be freely downloaded [here](https://doi.org/10.17632/dvmz6pkzvb).
 
 ## Major Update (January 19, 2023)
 
