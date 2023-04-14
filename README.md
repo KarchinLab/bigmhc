@@ -4,7 +4,11 @@ BigMHC is a deep learning tool for predicting MHC-I (neo)epitope presentation an
 
 See [the paper](https://doi.org/10.1101/2022.08.29.505690) for more information.
 
-All data used in this research can be freely downloaded [here](https://doi.org/10.17632/dvmz6pkzvb.1).
+All data used in this research can be freely downloaded [here](https://doi.org/10.17632/dvmz6pkzvb).
+
+## Major Update (January 19, 2023)
+
+Major updates have been made to the models, code, data, and preprint. Please pull the latest versions for using BigMHC and note the revised training procedure.
 
 ## Installation
 
@@ -18,24 +22,29 @@ Execution is OS agnostic and does not require GPUs.
 
 Training models with large batch sizes (e.g. 32768) requires significant GPU memory (about 94 GB total). Transfer learning requires minimal GPU memory and can be reasonably conducted on a CPU.
 
-* [python](https://www.python.org/)
-  * Paper used version 3.9.13
-* [pytorch](https://pytorch.org)
-  * Paper used PyTorch built from source version 1.13.0
-* [pandas](https://pandas.pydata.org)
-  * Paper used version 1.4.2
+The versions used in the paper are parenthesized.
+
+* [python](https://www.python.org/) (3.9.13)
+* [pytorch](https://pytorch.org) (1.13.0)
+* [pandas](https://pandas.pydata.org) (1.4.4)
 
 #### Optional Dependencies
 
-* [scikit-learn](https://scikit-learn.org)
-  * Paper used version 1.0.2
+* [scikit-learn](https://scikit-learn.org) (1.0.2)
   * Required when using the target column CLI argument
-* [cuda](https://developer.nvidia.com/cuda-downloads)
-  * Paper used version 11.7
+* [cuda](https://developer.nvidia.com/cuda-downloads) (11.7)
   * Required for GPU usage
-* [magma](https://developer.nvidia.com/magma)
-  * Paper used magma-cuda117 version 2.6.1
+* [magma](https://developer.nvidia.com/magma) (magma-cuda117 version 2.6.1)
   * Recommended for GPU usage
+
+#### Jupyter Notebook Dependencies
+
+* [numpy](https://numpy.org/) (1.21.5)
+* [scipy](https://scipy.org/) (1.7.3)
+* [matplotlib](https://matplotlib.org/) (3.5.3)
+* [seaborn](https://seaborn.pydata.org/) (0.12.1)
+* [py3dmol](https://pypi.org/project/py3Dmol/) (2.0.0.post2)
+* [logomaker](https://pypi.org/project/logomaker/) (0.8)
 
 #### Get the BigMHC Source
 ```
