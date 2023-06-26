@@ -1,5 +1,7 @@
 # BigMHC
 
+[![DOI](https://zenodo.org/badge/530254502.svg)](https://zenodo.org/badge/latestdoi/530254502)
+
 BigMHC is a deep learning tool for predicting MHC-I (neo)epitope presentation and immunogenicity.
 
 See [the paper](https://doi.org/10.1101/2022.08.29.505690) for more information.
