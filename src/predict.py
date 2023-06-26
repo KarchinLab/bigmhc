@@ -21,8 +21,6 @@ import cli
 
 from bigmhc import BigMHC
 
-from metrics import auroc, auprc, meanppvn
-
 
 def predict(models, data, args):
 
@@ -36,7 +34,6 @@ def predict(models, data, args):
             devices=args.devices)
 
     preds = list()
-    modelname = "BigMHC"
     with torch.no_grad():
         for idx,bat in enumerate(data):
             if args.verbose:
@@ -64,7 +61,6 @@ def predict(models, data, args):
     return pd.concat(preds).sort_index()
 
 
-
 def main():
 
     args, data, models = cli.parseArgs(train=False)
@@ -82,18 +78,6 @@ def main():
 
     preds.to_csv(args.out, index=False)
 
-    if args.tgtcol is not None:
-        T = preds["tgt"]
-        P = preds[args.modelname]
-        tsum = int(T.sum())
-        if not tsum or tsum == len(T):
-            raise ValueError(
-                "cannot print metrics: only one class found")
-        print("AUROC: {}".format(auroc(T,P)))
-        print("AUPRC: {}".format(auprc(T,P)))
-        print("Mean PPVn: {}".format(meanppvn(T,P)))
-
 
 if __name__ == "__main__":
     main()
-

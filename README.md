@@ -82,9 +82,7 @@ Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the 
 
 #### Required Argument for Training and Retraining
 * `-t` or `--tgtcol` column index of target values
-  * Optional for `predict.py`
-  * If using `predict.py`, this column is used to calculate performance metrics.
-  * If using `train.py`, elements in this column are considered ground truth values.
+  * Elements in this column are considered ground truth values.
 * `-o` or `--out` output directory
   * Directory to save model parameters for each epoch
 
@@ -121,6 +119,7 @@ Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the 
   * Turn this down if running out of memory
   * If using `predict.py`, defaults to a value that is estimated to fully occupy the device with the least memory
   * If using `train.py`, defaults to `32`
+* `-s` or `--pseudoseqs` CSV file mapping MHC to one-hot encoding
 * `-l` or `--lr` AdamW optimizer learning rate
   * Only available for `train.py`
 * `-e` or `--epochs` number of epochs for transfer learning

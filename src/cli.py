@@ -29,11 +29,17 @@ import torch
 from typing import Union
 
 from bigmhc import BigMHC
-# from bigmhc_anchor import BigMHCAnchor
-# from bigmhc_bilstm import BigMHCBiLSTM
 
 from dataset import Dataset
 from mhcenc import MHCEncoder
+
+
+def _rootdir():
+    return \
+        os.path.dirname(
+            os.path.dirname(
+                os.path.abspath(
+                    __file__)))
 
 
 def _parseTransferLearn(args : argparse.Namespace) -> argparse.Namespace:
@@ -58,11 +64,10 @@ def _parseModel(args : argparse.Namespace) -> argparse.Namespace:
         return args 
 
     elmodels = [
-        os.path.abspath(
             os.path.join(
-                os.pardir,
+                _rootdir(),
                 "models",
-                "bat{}".format(int(2**x))))
+                "bat{}".format(int(2**x)))
         for x in range(9,16)]
 
     immodels = [os.path.join(x, "im") for x in elmodels]
@@ -234,12 +239,10 @@ def parseArgs(train):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    parser = argparse.ArgumentParser()
-
     parser = argparse.ArgumentParser(
         ("Train BigMHC from scratch or just the final and penultimate layers"
-         "using a specified base model for transfer learning") if train else
-        "Predict pMHC presentation or immunogenicity with BigMHC")
+         " using a specified base model for transfer learning") if train else
+         "Predict pMHC presentation or immunogenicity with BigMHC")
 
     parser.add_argument(
         "-i",
@@ -253,33 +256,33 @@ def parseArgs(train):
         "--models",
         type=str,
         required=False,
-        help=("either \"el\" or \"im\" for presentation (eluted ligand)"
-              "and immunogenicity prediction respectively."
-              "Or specify a colon-delimited paths to model directories"))
+        help=("Either \"el\" or \"im\" for presentation (eluted ligand)"
+              " and immunogenicity prediction respectively."
+              " Or specify a colon-delimited paths to model directories"))
 
     parser.add_argument(
         "-o",
         "--out",
         type=str,
         default=None,
-        help="path to dir in which to save trained model" if train else
-             ("path to file in which to save predictions."
-              "If None, then predictions are saved to [INPUT].prd"))
+        help="Path to dir in which to save trained model" if train else
+             ("Path to file in which to save predictions."
+              " If None, then predictions are saved to [INPUT].prd"))
 
     parser.add_argument(
         "-s",
         "--pseudoseqs",
         type=str,
-        default=os.path.join(os.pardir, "data", "pseudoseqs.csv"),
-        help="csv file mapping MHC sequence to one-hot encoding")
+        default=os.path.join(_rootdir(), "data", "pseudoseqs.csv"),
+        help="CSV file mapping MHC to one-hot encoding")
 
     parser.add_argument(
         "-d",
         "--devices",
         type=str,
         default="all",
-        help=("comma-separated list of GPU device ids."
-              "Use \"all\" to use all GPUs or \"cpu\" to use the CPU"))
+        help=("Comma-separated list of GPU device ids."
+              " Use \"all\" to use all GPUs or \"cpu\" to use the CPU"))
 
     parser.add_argument(
         "-v",
@@ -293,32 +296,32 @@ def parseArgs(train):
         "--maxbat",
         type=int,
         default=32 if train else None,
-        help=("maxmum batch size (turn down if running out of memory)."
-              "If None, we guess the max by the devices arg."))
+        help=("Maxmum batch size (turn down if running out of memory)."
+              " If None, we guess the max by the devices arg."))
 
     parser.add_argument(
         "-c",
         "--hdrcnt",
         type=int,
         default=1,
-        help="number of header lines to skip in the input file")
+        help="Number of header lines to skip in the input file")
 
     parser.add_argument(
         "-a",
         "--allele",
         default=0,
-        help=("zero-indexed column of mhc alleles or an allele name."
-              "For example, use 0 if the first column of the input file"
-              "contains an MHC allele. You can specify an allele name"
-              "to apply a specified allele to all peptides by passing"
-              "an allele name in the format: HLA-A*02:01"))
+        help=("Zero-indexed column of mhc alleles or an allele name."
+              " For example, use 0 if the first column of the input file"
+              " contains an MHC allele. You can specify an allele name"
+              " to apply a specified allele to all peptides by passing"
+              " an allele name in the format: HLA-A*02:01"))
 
     parser.add_argument(
         "-p",
         "--pepcol",
         type=int,
         default=1,
-        help="zero-indexed column of the input file containing peptides")
+        help="Zero-indexed column of the input file containing peptides")
 
     parser.add_argument(
         "-t",
@@ -326,23 +329,21 @@ def parseArgs(train):
         type=int,
         default=None,
         required=train,
-        help=("zero-indexed column of the input file containing target values."
-              "If making predictions, then model performance metrics"
-              "are calculated using these target values as ground truth."))
+        help="Zero-indexed column of the input file containing target values")
 
     parser.add_argument(
         "-j",
         "--jobs",
         type=int,
         default=None,
-        help="number of workers for parallel data loading")
+        help="Number of workers for parallel data loading")
 
     parser.add_argument(
         "-f",
         "--prefetch",
         type=int,
         default=None,
-        help="number of batches to prefetch per data loader worker")
+        help="Number of batches to prefetch per data loader worker")
 
     if train:
 
@@ -351,14 +352,14 @@ def parseArgs(train):
             "--lr",
             type=float,
             default=5e-5,
-            help="optimizer learning rate")
+            help="Optimizer learning rate")
 
         parser.add_argument(
             "-e",
             "--epochs",
             type=int,
             default=50,
-            help="number of training epochs")
+            help="Number of training epochs")
 
     else:
 
