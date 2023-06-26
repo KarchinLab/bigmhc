@@ -1,7 +1,5 @@
 # BigMHC
 
-[![DOI](https://zenodo.org/badge/530254502.svg)](https://zenodo.org/badge/latestdoi/530254502)
-
 BigMHC is a deep learning tool for predicting MHC-I (neo)epitope presentation and immunogenicity.
 
 See [the paper](https://doi.org/10.1101/2022.08.29.505690) for more information.
@@ -14,26 +12,34 @@ Major updates have been made to the models, code, data, and preprint. Please pul
 
 ## Installation
 
-All methods were tested on Debian 11 using Linux 5.10.0-19-amd64, AMD EPYC 7443P, and four RTX 3090 GPUs.
 
-After installing dependencies, install BigMHC by cloning this repository. The repository is about 5GB, so installation takes about 5 minutes depending on internet speed.
+### Get the BigMHC Source
+```
+git clone https://github.com/karchinlab/bigmhc.git
+```
 
-#### Required Dependencies
+The repository is about 5GB, so installation generally takes about 3 minutes depending on internet speed.
+
+### Environment and Dependencies
 
 Execution is OS agnostic and does not require GPUs.
 
 Training models with large batch sizes (e.g. 32768) requires significant GPU memory (about 94 GB total). Transfer learning requires minimal GPU memory and can be reasonably conducted on a CPU.
 
-The versions used in the paper are parenthesized.
+All methods were tested on Debian 11 using Linux 5.10.0-19-amd64, AMD EPYC 7443P, and four RTX 3090 GPUs.
 
-* [python](https://www.python.org/) (3.9.13)
+Software depenencies are listed below (the versions used in the paper are parenthesized).
+
+#### Required Dependencies
+
+* [python](https://www.python.org) (3.9.13)
+* [numpy](https://numpy.org) (1.21.5)
 * [pytorch](https://pytorch.org) (1.13.0)
 * [pandas](https://pandas.pydata.org) (1.4.4)
+* [psutil](https://pypi.org/project/psutil) (5.9.4)
 
 #### Optional Dependencies
 
-* [scikit-learn](https://scikit-learn.org) (1.0.2)
-  * Required when using the target column CLI argument
 * [cuda](https://developer.nvidia.com/cuda-downloads) (11.7)
   * Required for GPU usage
 * [magma](https://developer.nvidia.com/magma) (magma-cuda117 version 2.6.1)
@@ -41,17 +47,13 @@ The versions used in the paper are parenthesized.
 
 #### Jupyter Notebook Dependencies
 
-* [numpy](https://numpy.org/) (1.21.5)
 * [scipy](https://scipy.org/) (1.7.3)
+* [scikit-learn](https://scikit-learn.org) (1.0.2)
 * [matplotlib](https://matplotlib.org/) (3.5.3)
 * [seaborn](https://seaborn.pydata.org/) (0.12.1)
 * [py3dmol](https://pypi.org/project/py3Dmol/) (2.0.0.post2)
 * [logomaker](https://pypi.org/project/logomaker/) (0.8)
-
-#### Get the BigMHC Source
-```
-git clone https://github.com/KarchinLab/bigmhc.git
-```
+* [openpyxl](https://pypi.org/project/openpyxl) (3.1.1)
 
 
 ## Usage
@@ -60,6 +62,10 @@ There are two executable Python scripts in src: `predict.py` and `train.py`.
 
 * `predict.py` is used for making predictions using BigMHC EL and BigMHC IM
 * `train.py` allows you to train or retrain (transfer learning) BigMHC on new data
+
+Both scripts, which can be run from any directory, offer help text.
+* `python predict.py --help`
+* `python train.py --help`
 
 #### Examples
 
@@ -144,6 +150,8 @@ benjialbert2
 	journal = {bioRxiv}
 }
 ```
+
+[![DOI](https://zenodo.org/badge/530254502.svg)](https://zenodo.org/badge/latestdoi/530254502)
 
 ## License
 
