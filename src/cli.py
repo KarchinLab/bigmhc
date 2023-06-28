@@ -255,7 +255,7 @@ def parseArgs(train):
         "-m",
         "--models",
         type=str,
-        required=False,
+        required=(not train),
         help=("Either \"el\" or \"im\" for presentation (eluted ligand)"
               " and immunogenicity prediction respectively."
               " Or specify a colon-delimited paths to model directories"))
