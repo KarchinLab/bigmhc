@@ -87,12 +87,14 @@ Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the 
   * `el` or `bigmhc_el` to load BigMHC EL
   * `im` or `bigmhc_im` to load BigMHC IM
   * Can be a path to a BigMHC model directory
+  * Optional for `train.py` (if a model dir is specified, then transfer learn)
 
-#### Required Argument for Training and Retraining
+#### Required Arguments for Training
 * `-t` or `--tgtcol` column index of target values
   * Elements in this column are considered ground truth values.
 * `-o` or `--out` output directory
   * Directory to save model parameters for each epoch
+  * Optional for transfer learning (defaults to `model` arg)
 
 #### Input Formatting Arguments
 * `-a` or `--allele` allele name or allele column
