@@ -2,7 +2,7 @@
 
 BigMHC is a deep learning tool for predicting MHC-I (neo)epitope presentation and immunogenicity.
 
-See [the paper](https://doi.org/10.1101/2022.08.29.505690) for more information.
+See [the Nature Machine Intelligence paper](https://www.nature.com/articles/s42256-023-00694-6) or [the preprint](https://doi.org/10.1101/2022.08.29.505690) for more information.
 
 All data used in this research can be freely downloaded [here](https://doi.org/10.17632/dvmz6pkzvb).
 
@@ -143,13 +143,12 @@ benjialbert2
 ```
 @article {Albert2022.08.29.505690,
 	author = {Albert, Benjamin Alexander and Yang, Yunxiao and Shao, Xiaoshan M. and Singh, Dipika and Smith, Kellie N. and Anagnostou, Valsamo and Karchin, Rachel},
-	title = {Deep Neural Networks Predict MHC-I Epitope Presentation and Transfer Learn Neoepitope Immunogenicity},
-	elocation-id = {2022.08.29.505690},
-	year = {2022},
-	doi = {10.1101/2022.08.29.505690},
-	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2022/08/29/2022.08.29.505690},
-	journal = {bioRxiv}
+	title = {Deep neural networks predict class I major histocompatibility complex epitope presentation and transfer learn neoepitope immunogenicity},
+	year = {2023},
+	doi = {10.1038/s42256-023-00694-6},
+	publisher = {Springer Nature},
+	URL = {https://www.nature.com/articles/s42256-023-00694-6},
+	journal = {Nature Machine Intelligence}
 }
 ```
 
