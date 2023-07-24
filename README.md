@@ -141,14 +141,16 @@ benjialbert2
 
 ## Citation
 ```
-@article {Albert2022.08.29.505690,
-	author = {Albert, Benjamin Alexander and Yang, Yunxiao and Shao, Xiaoshan M. and Singh, Dipika and Smith, Kellie N. and Anagnostou, Valsamo and Karchin, Rachel},
-	title = {Deep neural networks predict class I major histocompatibility complex epitope presentation and transfer learn neoepitope immunogenicity},
-	year = {2023},
-	doi = {10.1038/s42256-023-00694-6},
-	publisher = {Springer Nature},
-	URL = {https://www.nature.com/articles/s42256-023-00694-6},
-	journal = {Nature Machine Intelligence}
+﻿@Article{Albert2023,
+	author={Albert, Benjamin Alexander and Yang, Yunxiao and Shao, Xiaoshan M. and Singh, Dipika and Smith, Kellie N. and Anagnostou, Valsamo and Karchin, Rachel},
+	title={Deep neural networks predict class I major histocompatibility complex epitope presentation and transfer learn neoepitope immunogenicity},
+	journal={Nature Machine Intelligence},
+	year={2023},
+	month={Jul},
+	day={20},
+	issn={2522-5839},
+	doi={10.1038/s42256-023-00694-6},
+	url={https://doi.org/10.1038/s42256-023-00694-6}
 }
 ```
 
