@@ -2,7 +2,10 @@
 
 BigMHC is a deep learning tool for predicting MHC-I (neo)epitope presentation and immunogenicity.
 
-See [the Nature Machine Intelligence paper](https://www.nature.com/articles/s42256-023-00694-6) or [the preprint](https://doi.org/10.1101/2022.08.29.505690) for more information.
+See the article for more information:
+* [Nature Machine Intelligence paper](https://www.nature.com/articles/s42256-023-00694-6)
+* [free NMI link](https://rdcu.be/dhkOY)
+* [the preprint](https://doi.org/10.1101/2022.08.29.505690)
 
 All data used in this research can be freely downloaded [here](https://doi.org/10.17632/dvmz6pkzvb).
 
