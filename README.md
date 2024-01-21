@@ -8,10 +8,6 @@ See the article for more information:
 
 All data used in this research can be freely downloaded [here](https://doi.org/10.17632/dvmz6pkzvb).
 
-## Major Update (January 19, 2023)
-
-Major updates have been made to the models, code, data, and preprint. Please pull the latest versions for using BigMHC and note the revised training procedure.
-
 ## Installation
 
 
@@ -137,10 +133,6 @@ Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the 
 * `-e` or `--epochs` number of epochs for transfer learning
   * Only available for `train.py`
 
-## Contact (Gmail)
-
-benjialbert2
-
 ## Citation
 ```
 ﻿@Article{Albert2023,
@@ -155,8 +147,6 @@ benjialbert2
 	url={https://doi.org/10.1038/s42256-023-00694-6}
 }
 ```
-
-[![DOI](https://zenodo.org/badge/530254502.svg)](https://zenodo.org/badge/latestdoi/530254502)
 
 ## License
 
