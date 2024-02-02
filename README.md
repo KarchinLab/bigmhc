@@ -76,6 +76,12 @@ python predict.py -i=../data/example2.csv -m=el -a=HLA-A*02:02 -p=0 -c=0 -d="cpu
 
 Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the data folder. Execution takes a few seconds. Compare your output with `example1.csv.cmp` and `example2.csv.cmp` respectively.
 
+#### Supported Alleles
+
+BigMHC only supports MHC-I. In order to handle different MHC naming schemes, BigMHC will perform fuzzy string matching to find the nearest MHC by name. For example, `HLA-A*02:01`, `A*02:01`, `HLAA0201`, and `A0201` are all considered valid and equivalent allele names. Additionally, synonymous substitutions and noncoding fields are handled, so `HLA-A*02:01:01` should be mapped to `HLA-A*02:01`.
+
+We do not validate allele names. BigMHC will make predictions even if given nonsense or MHC-II input, as it will find the nearest valid MHC name to the provided invalid allele name. The list of alleles used in our multiple sequence alignment, to which input is mapped, can be found in the [pseudosequences data file](data/pseudoseqs.csv).
+
 #### Required Arguments
 * `-i` or `--input` input CSV file
   * Columns are zero-indexed
