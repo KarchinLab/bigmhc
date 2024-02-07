@@ -10,13 +10,11 @@ All data used in this research can be freely downloaded [here](https://doi.org/1
 
 ## Installation
 
-
-### Get the BigMHC Source
 ```
-git clone https://github.com/karchinlab/bigmhc.git
+pip install git+https://github.com/griffithlab/bigmhc.git
 ```
 
-The repository is about 5GB, so installation generally takes about 3 minutes depending on internet speed.
+This will install of the required dependencies.
 
 ### Environment and Dependencies
 
@@ -25,16 +23,6 @@ Execution is OS agnostic and does not require GPUs.
 Training models with large batch sizes (e.g. 32768) requires significant GPU memory (about 94 GB total). Transfer learning requires minimal GPU memory and can be reasonably conducted on a CPU.
 
 All methods were tested on Debian 11 using Linux 5.10.0-19-amd64, AMD EPYC 7443P, and four RTX 3090 GPUs.
-
-Software depenencies are listed below (the versions used in the paper are parenthesized).
-
-#### Required Dependencies
-
-* [python](https://www.python.org) (3.9.13)
-* [numpy](https://numpy.org) (1.21.5)
-* [pytorch](https://pytorch.org) (1.13.0)
-* [pandas](https://pandas.pydata.org) (1.4.4)
-* [psutil](https://pypi.org/project/psutil) (5.9.4)
 
 #### Optional Dependencies
 
@@ -56,22 +44,20 @@ Software depenencies are listed below (the versions used in the paper are parent
 
 ## Usage
 
-There are two executable Python scripts in src: `predict.py` and `train.py`.
+There are two commandline entrypoints:  `bigmhc_predict` and `bigmhc_train`.
 
-* `predict.py` is used for making predictions using BigMHC EL and BigMHC IM
-* `train.py` allows you to train or retrain (transfer learning) BigMHC on new data
+* `bigmhc_predict` is used for making predictions using BigMHC EL and BigMHC IM
+* `bigmhc_train` allows you to train or retrain (transfer learning) BigMHC on new data
 
 Both scripts, which can be run from any directory, offer help text.
-* `python predict.py --help`
-* `python train.py --help`
+* `bigmhc_predict --help`
+* `bigmhc_train --help`
 
 #### Examples
 
-From within the `src` dir, you can execute the below examples:
-
 ```
-python predict.py -i=../data/example1.csv -m=el -t=2 -d="cpu"
-python predict.py -i=../data/example2.csv -m=el -a=HLA-A*02:02 -p=0 -c=0 -d="cpu"
+bigmhc_predict -i=../data/example1.csv -m=el -t=2 -d="cpu"
+bigmhc_predict -i=../data/example2.csv -m=el -a=HLA-A*02:02 -p=0 -c=0 -d="cpu"
 ```
 
 Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the data folder. Execution takes a few seconds. Compare your output with `example1.csv.cmp` and `example2.csv.cmp` respectively.
@@ -91,7 +77,7 @@ We do not validate allele names. BigMHC will make predictions even if given nons
   * `el` or `bigmhc_el` to load BigMHC EL
   * `im` or `bigmhc_im` to load BigMHC IM
   * Can be a path to a BigMHC model directory
-  * Optional for `train.py` (if a model dir is specified, then transfer learn)
+  * Optional for `bigmhc_train` (if a model dir is specified, then transfer learn)
 
 #### Required Arguments for Training
 * `-t` or `--tgtcol` column index of target values
@@ -110,12 +96,12 @@ We do not validate allele names. BigMHC will make predictions even if given nons
 
 #### Output Arguments
 * `-o` or `--out` output file or directory
-  * If using `predict.py`, save CSV data to this file
+  * If using `bigmhc_predict`, save CSV data to this file
     * Defaults to `input`.prd
-  * If using `train.py`, save the retrained BigMHC model to this directory
+  * If using `bigmhc_train`, save the retrained BigMHC model to this directory
     * If transfer learning, defaults to the base model dir
 * `-z` or `--saveatt` boolean indicating whether to save attention values
-  * Only available for `predict.py`
+  * Only available for `bigmhc_predict`
   * Use `1` for true and `0` for false
 
 #### Other Optional Arguments
@@ -131,13 +117,13 @@ We do not validate allele names. BigMHC will make predictions even if given nons
   * Increasing this number can help prevent GPUs waiting on the CPU, but increases memory usage
 * `-b` or `--maxbat` Maximum batch size
   * Turn this down if running out of memory
-  * If using `predict.py`, defaults to a value that is estimated to fully occupy the device with the least memory
-  * If using `train.py`, defaults to `32`
+  * If using `bigmhc_predict`, defaults to a value that is estimated to fully occupy the device with the least memory
+  * If using `bigmhc_train`, defaults to `32`
 * `-s` or `--pseudoseqs` CSV file mapping MHC to one-hot encoding
 * `-l` or `--lr` AdamW optimizer learning rate
-  * Only available for `train.py`
+  * Only available for `bigmhc_train`
 * `-e` or `--epochs` number of epochs for transfer learning
-  * Only available for `train.py`
+  * Only available for `bigmhc_train`
 
 ## Citation
 ```
