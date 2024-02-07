@@ -17,9 +17,9 @@ import os
 import torch
 import pandas as pd
 
-import src.cli 
+import bigmhc.src.cli
 
-from src.bigmhc import BigMHC
+from bigmhc.src.bigmhc import BigMHC
 
 
 def predict(models, data, args):
@@ -63,7 +63,7 @@ def predict(models, data, args):
 
 def main():
 
-    args, data, models = src.cli.parseArgs(train=False)
+    args, data, models = bigmhc.src.cli.parseArgs(train=False)
 
     preds = predict(models=models, data=data, args=args)
 

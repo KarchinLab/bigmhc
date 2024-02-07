@@ -16,9 +16,9 @@ import os
 
 import torch
 
-import src.cli
+import bigmhc.src.cli
 
-from src.bigmhc import BigMHC
+from bigmhc.src.bigmhc import BigMHC
 
 
 def train(model, data, args):
@@ -81,7 +81,7 @@ def train(model, data, args):
 
 def main():
 
-    args, data, model = src.cli.parseArgs(train=True)
+    args, data, model = bigmhc.src.cli.parseArgs(train=True)
 
     if len(model) > 1:
         raise ValueError(
