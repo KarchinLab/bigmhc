@@ -12,6 +12,7 @@ setup(
     url='https://github.com/KarchinLab/bigmhc',
     author='Albert, Benjamin Alexander and Yang, Yunxiao and Shao, Xiaoshan M. and Singh, Dipika and Smith, Kellie N. and Anagnostou, Valsamo and Karchin, Rachel',
     scripts=['src/bigmhc_predict', 'src/bigmhc_train'],
+    packages=['data', 'src', 'models'],
     include_package_data=True,
     install_requires=[
         'torch',

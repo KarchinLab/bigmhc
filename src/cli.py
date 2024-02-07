@@ -28,10 +28,10 @@ import torch
 
 from typing import Union
 
-from bigmhc import BigMHC
+from src.bigmhc import BigMHC
 
-from dataset import Dataset
-from mhcenc import MHCEncoder
+from src.dataset import Dataset
+from src.mhcenc import MHCEncoder
 
 
 def _rootdir():

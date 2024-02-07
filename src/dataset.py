@@ -20,8 +20,8 @@ import torch
 
 from typing import Union, Callable
 
-import mhcuid
-import encseq
+import src.mhcuid
+import src.encseq
 
 
 class Batch:
@@ -52,7 +52,7 @@ class Dataset:
             self,
             pmhcs  : pd.DataFrame,
             mhcenc : dict = None,
-            encpep : Callable = encseq.dummy):
+            encpep : Callable = src.encseq.dummy):
 
         self.df     = pmhcs
         self.mhcenc = mhcenc
@@ -280,7 +280,7 @@ class Dataset:
         df.insert(
             loc=0,
             column="uid",
-            value=df["mhc"].apply(mhcuid.mhcuid) + '_' + df["pep"])
+            value=df["mhc"].apply(src.mhcuid.mhcuid) + '_' + df["pep"])
         df.set_index(keys="uid", drop=True, inplace=True)
 
         if verbose:
