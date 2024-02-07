@@ -14,7 +14,7 @@ All data used in this research can be freely downloaded [here](https://doi.org/1
 pip install git+https://github.com/karchinlab/bigmhc.git
 ```
 
-This will install of the required dependencies.
+This will take a few minutes and will install all of the required dependencies.
 
 ### Environment and Dependencies
 
