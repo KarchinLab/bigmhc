@@ -11,7 +11,7 @@ All data used in this research can be freely downloaded [here](https://doi.org/1
 ## Installation
 
 ```
-pip install git+https://github.com/griffithlab/bigmhc.git
+pip install git+https://github.com/karchinlab/bigmhc.git
 ```
 
 This will install of the required dependencies.
