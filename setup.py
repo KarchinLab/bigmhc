@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_namespace_packages
 
 def readme():
     with open("README.md") as f:
@@ -12,7 +12,7 @@ setup(
     url='https://github.com/KarchinLab/bigmhc',
     author='Albert, Benjamin Alexander and Yang, Yunxiao and Shao, Xiaoshan M. and Singh, Dipika and Smith, Kellie N. and Anagnostou, Valsamo and Karchin, Rachel',
     scripts=['bigmhc_predict', 'bigmhc_train'],
-    packages=['bigmhc'],
+    packages=find_namespace_packages(),
     include_package_data=True,
     install_requires=[
         'torch',
