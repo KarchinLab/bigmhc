@@ -37,7 +37,7 @@ The subsequent rows create a mapping from MHC to encoding.
 
 import torch
 
-from mhcuid import mhcuid
+from bigmhc.src.mhcuid import mhcuid
 
 
 class MHCEncoder:
