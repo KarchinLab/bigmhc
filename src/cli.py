@@ -143,6 +143,13 @@ def _parseOut(args : argparse.Namespace) -> argparse.Namespace:
 
 def _parseJobs(args : argparse.Namespace) -> argparse.Namespace:
     if args.jobs is None or args.jobs <= 0:
+        if hasattr(os, 'sched_getaffinity'):
+            print("Using os.sched_getaffinity")
+            try:
+                args.jobs = len(os.sched_getaffinity(0))
+                return args
+            except Exception:
+                pass
         args.jobs = max(1, psutil.cpu_count(logical=False) // 2)
     return args
 
