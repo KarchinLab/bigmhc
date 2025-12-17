@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='BigMHC',
-    version='1.0',
+    version='1.0.1',
     description='BigMHC is a deep learning tool for predicting MHC-I (neo)epitope presentation and immunogenicity.',
     long_description=readme(),
     url='https://github.com/KarchinLab/bigmhc',

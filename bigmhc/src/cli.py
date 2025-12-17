@@ -143,7 +143,11 @@ def _parseOut(args : argparse.Namespace) -> argparse.Namespace:
 
 def _parseJobs(args : argparse.Namespace) -> argparse.Namespace:
     if args.jobs is None or args.jobs <= 0:
-        args.jobs = max(1, psutil.cpu_count(logical=False) // 2)
+        try:
+            args.jobs = len(psutil.Process().cpu_affinity())
+        except:
+            args.jobs = max(1, psutil.cpu_count(logical=False) // 2)
+        print("Number of jobs set to {}".format(args.jobs))
     return args
 
 
