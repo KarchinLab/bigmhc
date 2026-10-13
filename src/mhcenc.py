@@ -51,7 +51,6 @@ class MHCEncoder:
         self.cols = cols
         self.subcache = dict()
         self.enclen = None
-        self.mappings = set()
 
         for mhc,enc in encs.items():
             if self.enclen is None:
@@ -136,8 +135,6 @@ class MHCEncoder:
                 v = tmp
             return u[len(b)]
 
-        premap = mhc
-
         if mhc in self.encs:
             return mhc
 
@@ -169,11 +166,6 @@ class MHCEncoder:
                     minkey = key
 
         self.subcache[mhc] = minkey
-
-        if premap not in self.mappings:
-            print("Allele {} mapped to {} for encoding.".format(premap, minkey),
-                  flush=True)
-            self.mappings.add(premap)
 
         return minkey
 
