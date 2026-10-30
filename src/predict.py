@@ -58,7 +58,11 @@ def predict(models, data, args):
                 attdf = pd.DataFrame(attdict, index=rawbat.index)
                 rawbat = pd.concat((rawbat, attdf), axis=1)
             preds.append(rawbat)
-    return pd.concat(preds).sort_index()
+    preds = pd.concat(preds).sort_index()
+    # keep the original column order and append the allele actually used
+    if "mhc_used" in preds.columns:
+        preds["mhc_used"] = preds.pop("mhc_used")
+    return preds
 
 
 def main():

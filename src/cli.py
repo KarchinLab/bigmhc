@@ -20,10 +20,12 @@ functions are defined here instead of duplicating in each executable script.
 import argparse
 import random
 import os
+import sys
 import time
 import psutil
 
 import numpy as np
+import pandas as pd
 import torch
 
 from typing import Union
@@ -204,6 +206,77 @@ def _loadModels(args : argparse.Namespace) -> BigMHC:
     return models
 
 
+def _resolveAlleles(
+        pmhcs  : pd.DataFrame,
+        mhcenc : MHCEncoder,
+        file = None) -> pd.DataFrame:
+    """
+    Resolves each distinct allele name in pmhcs["mhc"] once, adds the
+    column "mhc_used" holding, for every row, the name (as written in the
+    pseudosequence file) of the allele whose encoding is used, and reports
+    each converted name once on stderr.
+
+    The report is printed regardless of the verbose flag because it
+    concerns the meaning of the predictions rather than progress. It is
+    produced here, in the main process and before the DataLoader exists,
+    so that it appears exactly once however many workers encode batches.
+    Resolving does not touch MHCEncoder.subcache, so the workers encode
+    exactly as before; mhc_used is a column of pmhcs so that it stays with
+    its row through batching and output.
+
+    Parameters
+    ----------
+    pmhcs : pd.DataFrame
+        as returned by Dataset.readPMHCs
+
+    mhcenc : MHCEncoder
+        the encoder that will encode pmhcs
+
+    file : file object, default=None
+        where to print the report; None for sys.stderr
+
+    Returns
+    -------
+    pmhcs with the additional string column "mhc_used"
+    """
+    if file is None:
+        file = sys.stderr
+
+    mhcs = pmhcs["mhc"].tolist()
+    resolved = dict()
+    rows = dict()
+    for mhc in mhcs:
+        if mhc not in resolved:
+            resolved[mhc] = mhcenc.resolveMHC(mhc)
+            rows[mhc] = 0
+        rows[mhc] += 1
+    pmhcs["mhc_used"] = [resolved[mhc].used for mhc in mhcs]
+    pmhcs = pmhcs.astype({"mhc_used":"string"})
+
+    converted = [res for res in resolved.values() if res.converted]
+    if not len(converted):
+        return pmhcs
+
+    print(
+        ("MHC name conversions: {} of {} distinct input allele names were"
+         " converted to a name in the pseudosequence file; predictions carry"
+         " the allele used for each row in the mhc_used column").format(
+            len(converted), len(resolved)),
+        file=file)
+    for res in converted:
+        msg = "MHC name conversion{}: input='{}' used='{}' reason='{}' rows={}".format(
+            " WARNING" if res.byEditDistance else "",
+            res.mhc, res.used, res.reason, rows[res.mhc])
+        if res.byEditDistance:
+            msg += (" -- the allele used only has the most similar name;"
+                    " this does not imply any biological similarity to the"
+                    " input, so check that the input is a supported MHC-I"
+                    " allele name")
+        print(msg, file=file)
+    file.flush()
+    return pmhcs
+
+
 def _loadData(args : argparse.Namespace) -> Dataset:
     """
     Constructs and returns a Dataset object
@@ -216,6 +289,9 @@ def _loadData(args : argparse.Namespace) -> Dataset:
         tgtcol=args.tgtcol,
         hdrcnt=args.hdrcnt,
         verbose=args.verbose)
+    pmhcs = _resolveAlleles(
+        pmhcs=pmhcs,
+        mhcenc=mhcenc)
     data = Dataset(
         pmhcs=pmhcs,
         mhcenc=mhcenc)

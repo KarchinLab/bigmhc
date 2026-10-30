@@ -46,6 +46,11 @@ class Dataset:
     """
     A wrapper for a Pandas DataFrame with helper functions
     for encoding pMHCs and batching instances.
+
+    Besides the columns made by readPMHCs, self.df may carry further
+    per-row columns (e.g. mhc_used added by cli._resolveAlleles); they
+    are ignored when encoding and returned with their rows by
+    getbat(enc=False), so they stay aligned with the predictions.
     """
 
     def __init__(
