@@ -78,9 +78,51 @@ Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the 
 
 #### Supported Alleles
 
-BigMHC only supports MHC-I. In order to handle different MHC naming schemes, BigMHC will perform fuzzy string matching to find the nearest MHC by name. For example, `HLA-A*02:01`, `A*02:01`, `HLAA0201`, and `A0201` are all considered valid and equivalent allele names. Additionally, synonymous substitutions and noncoding fields are handled, so `HLA-A*02:01:01` should be mapped to `HLA-A*02:01`.
+BigMHC only supports MHC-I. The alleles it can encode are the 18,929 entries of the [pseudosequences data file](data/pseudoseqs.csv) (HLA-A, -B, -C, -E, -F, -G and several non-human species). Allele names are compared after normalization, which upper-cases the name and removes every character that is not a letter or digit, so `HLA-A*02:01`, `hla-a*02:01`, `HLA-A02:01` and `HLAA0201` all denote the entry `HLA-A*02:01`.
 
-We do not validate allele names. BigMHC will make predictions even if given nonsense or MHC-II input, as it will find the nearest valid MHC name to the provided invalid allele name. The list of alleles used in our multiple sequence alignment, to which input is mapped, can be found in the [pseudosequences data file](data/pseudoseqs.csv).
+If the normalized name is not in the file, BigMHC does not stop: it substitutes the nearest entry *by name* and predicts for that allele instead. The rules are applied in this order and the first one that yields an entry wins:
+
+1. **HLA prefix.** A name made of one letter followed by digits (`A0201`, `A*02:01`) gets `HLA` prepended; the search then continues with the next rule rather than with an exact lookup.
+2. **Truncation.** Characters are removed from the right end of the name one at a time until some entry starts with what is left; the first such entry in file order is used. This maps `HLA-A*02:01:01` to `HLA-A*02:01`, but it also maps an allele that is absent from the file to a neighbour sharing its leading characters, e.g. `HLA-A*02:1040` to `HLA-A*02:104`.
+3. **Edit distance.** If no prefix matches, the entry with the smallest Levenshtein distance to the name is used. This always yields some MHC-I allele, also for MHC-II names or nonsense (`HLA-DRB1*01:01` becomes `HLA-B*13:101`, `XYZ123` becomes `HLA-A*01:23`); the match is by spelling only and implies no biological similarity.
+
+Because rule 1 is followed by truncation and not by an exact lookup, a short name without `HLA-` can resolve to a *different* allele than the one meant: `A0201` and `A*02:01` do reach `HLA-A*02:01`, but `A*02:02` resolves to `HLA-A*02:01` (the first entry starting with `HLAA020`) and `B*27:05` to `HLA-B*27:01`, although `HLA-A*02:02` and `HLA-B*27:05` are in the file. This is a known issue; the matching rules have been left unchanged so far. Use full names such as `HLA-A*02:02` to avoid it, and check the conversion report described next.
+
+BigMHC does not validate allele names, but every conversion is reported:
+
+* After the input is read, a summary is printed to stderr (also with `-v=0`): one line per distinct input name that was converted, with the allele actually used, the rule(s) applied and the number of input rows concerned. Names written exactly as in the file are not reported. Edit-distance matches are marked `WARNING`, since they are the ones most likely to be wrong.
+* `predict.py` adds the column `mhc_used` after all other output columns: for every row, the name of the allele whose pseudosequence was actually used. The `mhc` column keeps the name exactly as given, so the two can be compared row by row.
+
+For example, with an input file containing
+
+```
+mhc,pep
+HLA-A*02:02,AAADIVNFL
+A*02:02,AAADIVNFL
+hla-a*02:02,AAADIVNFL
+HLA-DRB1*01:01,AAADIVNFL
+```
+
+`python predict.py -i=example.csv -m=el -d="cpu"` prints to stderr
+
+```
+MHC name conversions: 3 of 4 distinct input allele names were converted to a name in the pseudosequence file; predictions carry the allele used for each row in the mhc_used column
+MHC name conversion: input='A*02:02' used='HLA-A*02:01' reason='HLA prefix + truncation (x=1)' rows=1
+MHC name conversion: input='hla-a*02:02' used='HLA-A*02:02' reason='normalization' rows=1
+MHC name conversion WARNING: input='HLA-DRB1*01:01' used='HLA-B*13:101' reason='edit distance (d=3)' rows=1 -- the allele used only has the most similar name; this does not imply any biological similarity to the input, so check that the input is a supported MHC-I allele name
+```
+
+and writes
+
+```
+mhc,pep,tgt,len,BigMHC_EL,mhc_used
+HLA-A*02:02,AAADIVNFL,,9,0.8622514,HLA-A*02:02
+A*02:02,AAADIVNFL,,9,0.4617879,HLA-A*02:01
+hla-a*02:02,AAADIVNFL,,9,0.8622514,HLA-A*02:02
+HLA-DRB1*01:01,AAADIVNFL,,9,0.06513106,HLA-B*13:101
+```
+
+The second row was scored for `HLA-A*02:01`, not for `HLA-A*02:02` as its `mhc` column might suggest; `mhc_used` makes this visible. Conversions do not change the predictions: for any input, the allele selected and the score are the same as in earlier versions that applied these rules silently.
 
 #### Required Arguments
 * `-i` or `--input` input CSV file
@@ -138,6 +180,10 @@ We do not validate allele names. BigMHC will make predictions even if given nons
   * Only available for `train.py`
 * `-e` or `--epochs` number of epochs for transfer learning
   * Only available for `train.py`
+
+#### Tests
+
+From the repository root, `python -m unittest discover -s tests` runs the test suite (the end-to-end tests load the models and take about a minute; they are skipped if the models are absent).
 
 ## Citation
 ```
