@@ -275,19 +275,16 @@ class MHCEncoder:
         """
         Resolves an allele name as provided by the user and records how.
 
-        Provided that self.encs is not modified between resolving and
-        encoding, the usedkey of the result equals nearestMHC(mhcuid(mhc)),
-        so the encoding that is used is unchanged; this method only adds
-        the record of the conversions. The search is repeated here instead
-        of reading self.subcache so that the recorded steps are always the
-        ones that apply to this name, and self.subcache is left untouched.
-
-        This method searches the current self.encs, whereas nearestMHC
-        keeps returning substitutes cached in self.subcache for the lifetime
-        of the MHCEncoder. If entries are added, removed or replaced after
-        substitutes have been cached, the two can disagree. Build a new
-        MHCEncoder (e.g. with MHCEncoder.read) whenever the encoding table
-        changes instead of modifying one that has already been used.
+        As long as the encoding table (self.encs) is not modified while
+        this MHCEncoder is in use, the usedkey of the result equals
+        nearestMHC(mhcuid(mhc)), so the encoding used is unchanged and
+        this method only adds the record of the conversions. The search
+        is repeated instead of reading self.subcache, so that the recorded
+        steps are the ones that apply to this name, and self.subcache is
+        left untouched; nearestMHC, in contrast, keeps returning cached
+        substitutes for the lifetime of the encoder. Whenever the table
+        changes, build a new MHCEncoder (e.g. with MHCEncoder.read) rather
+        than modifying one that has already been used.
 
         Parameters
         ----------

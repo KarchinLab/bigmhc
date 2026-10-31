@@ -256,8 +256,11 @@ class SyntheticTableTests(unittest.TestCase):
             " reason='HLA prefix + truncation (x=1)')")
 
 
-# Resolutions established on the unmodified code (phase 01 of the change,
-# work/baseline/mapping_table.csv) for data/pseudoseqs.csv.
+# Expected resolutions for data/pseudoseqs.csv: the entry selected by the
+# original nearestMHC() of KarchinLab/bigmhc commit 199e890 (the base of
+# this change) for each input, and the rule(s) that search applied to
+# reach it. The original search is kept verbatim as referenceNearest in
+# testutil.
 REAL_TABLE_EXPECTED = {
     "HLA-A*02:01":        ("HLA-A*02:01",  "exact"),
     "hla-a*02:01":        ("HLA-A*02:01",  "normalization"),

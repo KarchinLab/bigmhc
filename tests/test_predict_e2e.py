@@ -8,15 +8,15 @@ tests/test_predict_e2e.py
 ------------------------------------------------------------------------
 
 End-to-end runs of predict.py and train.py on the CPU with the models of
-the repository (skipped if they are absent). Each run loads the seven
-models, so this module takes about a minute.
+the repository (skipped if they are absent).
 
-Checks: the README examples still reproduce their .cmp files (scores to
-float32 rounding), the output keeps its original columns and gains
-mhc_used last (also after the att_* columns of -z), the stderr report is
-printed once (with -v=0 and with several DataLoader workers) and names the
-alleles established on the unmodified code, both input modes work, and
-rows that resolve to the same allele receive the same score.
+Checks: the README examples match their .cmp files (text columns exactly,
+BigMHC_EL within an absolute tolerance of 1e-5), the output keeps its
+original columns and gains mhc_used last (also after the att_* columns of
+-z), the stderr report is printed once (with -v=0 and with several
+DataLoader workers) and names the alleles established on the unmodified
+code, both input modes work, and rows that resolve to the same allele
+receive the same score.
 """
 
 import os
@@ -37,8 +37,14 @@ from testutil import (assertSameRows, checkNoRepeatedOptions, conversionLines,
 # argparse would silently keep the last one).
 DEVICE = "-d=cpu"
 
-# work/inputs/testset_alleles.csv of the change's baseline: 17 rows,
-# 13 distinct spellings, 8/9/10-mers, duplicate rows (1/8, 3/9, 7/17)
+# Fixture rows (input name, peptide, expected mhc_used): 13 spellings of a
+# few alleles (exact, case and punctuation variants, missing HLA prefix,
+# extra field, names absent from the file, an MHC-II name, nonsense) with
+# 8/9/10-mer peptides, so that batching by peptide length is exercised.
+# HLA-A*02:01 and A0201 with GILGFVFTL each appear twice and XYZ123 appears
+# with two peptides, giving rows=2 in the report. The expected names are
+# those selected by the unmodified lookup (see REAL_TABLE_EXPECTED in
+# test_mhcenc.py).
 TESTSET = [
     ("HLA-A*02:01",    "GILGFVFTL",  "HLA-A*02:01"),
     ("hla-a*02:01",    "GILGFVFTL",  "HLA-A*02:01"),
@@ -69,7 +75,7 @@ EXAMPLE1 = os.path.join(testutil.DATA, "example1.csv")
 EXAMPLE2 = os.path.join(testutil.DATA, "example2.csv")
 
 CMP_COLUMNS = ["mhc", "pep", "tgt", "len"]
-SCORE_TOL = 1e-5
+SCORE_TOL = 1e-5   # absolute tolerance for BigMHC_EL against the .cmp files
 
 # Runs predict.main() exactly as predict.py does, with the DataLoader
 # class replaced by a subclass that records the num_workers it was built
@@ -148,7 +154,7 @@ class PredictEndToEndTests(unittest.TestCase):
         workers = [int(w) for w in marker[0].split("=", 1)[1].split(",")]
         return proc, readCSV(out), out, workers
 
-    def test_example1_reproduces_cmp_and_is_silent(self):
+    def test_example1_matches_cmp_within_tolerance_and_is_silent(self):
         proc, rows, _ = self.predict("example1", ["-i=" + EXAMPLE1, "-m=el", "-t=2"])
         cmp = readCSV(EXAMPLE1 + ".cmp")
         self.assertEqual(list(rows[0].keys()), list(cmp[0].keys()) + ["mhc_used"])
@@ -157,7 +163,7 @@ class PredictEndToEndTests(unittest.TestCase):
         self.assertEqual([r["mhc_used"] for r in rows], [r["mhc"] for r in rows])
         self.assertEqual(reportLines(proc.stderr), [])
 
-    def test_example2_fixed_allele_reproduces_cmp_and_is_silent(self):
+    def test_example2_fixed_allele_matches_cmp_within_tolerance_and_is_silent(self):
         proc, rows, _ = self.predict(
             "example2", ["-i=" + EXAMPLE2, "-m=el", "-a=HLA-A*02:02", "-p=0", "-c=0"])
         cmp = readCSV(EXAMPLE2 + ".cmp")

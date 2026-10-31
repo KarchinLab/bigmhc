@@ -78,20 +78,20 @@ Predictions will be written to `example1.csv.prd` and `example2.csv.prd` in the 
 
 #### Supported Alleles
 
-BigMHC only supports MHC-I. The alleles it can encode are the 18,929 entries of the [pseudosequences data file](data/pseudoseqs.csv) (HLA-A, -B, -C, -E, -F, -G and several non-human species). Allele names are compared after normalization, which upper-cases the name and removes every character that is not a letter or digit, so `HLA-A*02:01`, `hla-a*02:01`, `HLA-A02:01` and `HLAA0201` all denote the entry `HLA-A*02:01`.
+BigMHC only supports MHC-I. The alleles it can encode are the 18,929 entries of the [pseudosequences data file](data/pseudoseqs.csv) (HLA-A, -B, -C, -E, -F, -G and several non-human species). Names are compared after normalization, which upper-cases them and keeps only the characters A–Z and 0–9, so `HLA-A*02:01`, `hla-a*02:01`, `HLA-A02:01` and `HLAA0201` all denote the entry `HLA-A*02:01`.
 
-If the normalized name is not in the file, BigMHC does not stop: it substitutes the nearest entry *by name* and predicts for that allele instead. The rules are applied in this order and the first one that yields an entry wins:
+If the normalized name is not in the file, BigMHC substitutes the nearest entry *by name* and predicts for that allele. The rules are tried in this order; the first one that yields an entry is used:
 
-1. **HLA prefix.** A name made of one letter followed by digits (`A0201`, `A*02:01`) gets `HLA` prepended; the search then continues with the next rule rather than with an exact lookup.
-2. **Truncation.** Characters are removed from the right end of the name one at a time until some entry starts with what is left; the first such entry in file order is used. This maps `HLA-A*02:01:01` to `HLA-A*02:01`, but it also maps an allele that is absent from the file to a neighbour sharing its leading characters, e.g. `HLA-A*02:1040` to `HLA-A*02:104`.
-3. **Edit distance.** If no prefix matches, the entry with the smallest Levenshtein distance to the name is used. This always yields some MHC-I allele, also for MHC-II names or nonsense (`HLA-DRB1*01:01` becomes `HLA-B*13:101`, `XYZ123` becomes `HLA-A*01:23`); the match is by spelling only and implies no biological similarity.
+1. **HLA prefix.** A name made of one letter followed by digits (`A0201`, `A*02:01`) gets `HLA` prepended; the search then continues with truncation rather than with an exact lookup.
+2. **Truncation.** A limited number of trailing characters (fewer than half of the name) are removed until some entry starts with the remainder. The match that removes the fewest characters is preferred; among entries sharing that prefix, the first in file order is used. This maps `HLA-A*02:01:01` to `HLA-A*02:01`, but also an allele absent from the file to a neighbour sharing its leading characters, e.g. `HLA-A*02:1040` to `HLA-A*02:104`.
+3. **Edit distance.** Otherwise the entry with the smallest Levenshtein distance to the name is used. This always yields some MHC-I allele, also for MHC-II names or nonsense (`HLA-DRB1*01:01` becomes `HLA-B*13:101`, `XYZ123` becomes `HLA-A*01:23`). Similarity of names does not establish biological similarity.
 
-Because rule 1 is followed by truncation and not by an exact lookup, a short name without `HLA-` can resolve to a *different* allele than the one meant: `A0201` and `A*02:01` do reach `HLA-A*02:01`, but `A*02:02` resolves to `HLA-A*02:01` (the first entry starting with `HLAA020`) and `B*27:05` to `HLA-B*27:01`, although `HLA-A*02:02` and `HLA-B*27:05` are in the file. This is a known issue; the matching rules have been left unchanged so far. Use full names such as `HLA-A*02:02` to avoid it, and check the conversion report described next.
+Because the prefix rule continues with truncation, a short name without `HLA-` can resolve to a different allele than intended: `A0201` and `A*02:01` reach `HLA-A*02:01`, but `A*02:02` resolves to `HLA-A*02:01` (the first entry starting with `HLAA020`) and `B*27:05` to `HLA-B*27:01`, although `HLA-A*02:02` and `HLA-B*27:05` are in the file. This is a known issue and the matching rules are unchanged; use full names such as `HLA-A*02:02` and check the conversion report.
 
 BigMHC does not validate allele names, but every conversion is reported:
 
-* After the input is read, a summary is printed to stderr (also with `-v=0`): one line per distinct input name that was converted, with the allele actually used, the rule(s) applied and the number of input rows concerned. Names written exactly as in the file are not reported. Edit-distance matches are marked `WARNING`, since they are the ones most likely to be wrong.
-* `predict.py` adds the column `mhc_used` after all other output columns: for every row, the name of the allele whose pseudosequence was actually used. The `mhc` column keeps the name exactly as given, so the two can be compared row by row.
+* After the input is read, a summary is printed to stderr (also with `-v=0`): one line per distinct converted input name, with the entry used, the rule(s) applied and the number of rows concerned. Names written exactly as in the file are not reported. Edit-distance matches are marked `WARNING` because similarity of names does not establish biological similarity.
+* `predict.py` appends the column `mhc_used`: for every row, the entry whose pseudosequence was used, as written in the file. The `mhc` column keeps the name as given, so the two can be compared row by row.
 
 For example, with an input file containing
 
@@ -122,7 +122,7 @@ hla-a*02:02,AAADIVNFL,,9,0.8622514,HLA-A*02:02
 HLA-DRB1*01:01,AAADIVNFL,,9,0.06513106,HLA-B*13:101
 ```
 
-The second row was scored for `HLA-A*02:01`, not for `HLA-A*02:02` as its `mhc` column might suggest; `mhc_used` makes this visible. Conversions do not change the predictions: for any input, the allele selected and the score are the same as in earlier versions that applied these rules silently.
+The second row was scored for `HLA-A*02:01`, not for `HLA-A*02:02` as its `mhc` column might suggest; `mhc_used` makes this visible. The report and the column only add information: the matching rules and the model weights are unchanged.
 
 #### Required Arguments
 * `-i` or `--input` input CSV file
@@ -183,7 +183,7 @@ The second row was scored for `HLA-A*02:01`, not for `HLA-A*02:02` as its `mhc` 
 
 #### Tests
 
-From the repository root, `python -m unittest discover -s tests` runs the test suite (the end-to-end tests load the models and take about a minute; they are skipped if the models are absent).
+From the repository root, `python -m unittest discover -s tests` runs the test suite. The end-to-end tests run the models on the CPU and are skipped if `models/` is absent.
 
 ## Citation
 ```
