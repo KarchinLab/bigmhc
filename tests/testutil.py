@@ -165,13 +165,36 @@ def writeCSV(path, rows, header=None):
     return path
 
 
+def optionNames(args):
+    """
+    The option names of a predict.py / train.py argument list, e.g.
+    ["-i", "-m", "-j"] for ["-i=x.csv", "-m=el", "-j=4"]
+    """
+    return [a.split("=", 1)[0] for a in args if a.startswith("-")]
+
+
+def checkNoRepeatedOptions(args):
+    """
+    Raises ValueError if an option occurs more than once in args.
+    argparse silently keeps the last occurrence, so a repeated option
+    would let one value override another without any test noticing.
+    """
+    names = optionNames(args)
+    repeated = sorted(set(n for n in names if names.count(n) > 1))
+    if repeated:
+        raise ValueError(
+            "option(s) {} given more than once in {}".format(repeated, list(args)))
+
+
 def runScript(script, args, cwd=SRC):
     """
     Runs src/<script> with args in a subprocess using the current
     interpreter and returns the CompletedProcess (stdout/stderr as str).
     stderr of DataLoader workers is captured too because they inherit
     the pipe, so duplicates printed by workers would be visible here.
+    Refuses argument lists in which an option is repeated.
     """
+    checkNoRepeatedOptions(args)
     cmd = [sys.executable, os.path.join(SRC, script)] + list(args)
     return subprocess.run(
         cmd,
@@ -189,6 +212,31 @@ def readCSV(path):
     import csv
     with open(path, newline="") as f:
         return list(csv.DictReader(f))
+
+
+def assertSameRows(rows, ref, columns, scorecol=None, tol=0.0,
+                   label="output", reflabel="reference"):
+    """
+    Compares two lists of CSV rows (as returned by readCSV) row by row.
+    Raises AssertionError when the row counts differ, when one of the
+    given columns is not string-equal in some row, or, if scorecol is
+    given, when |float(row) - float(ref)| > tol in some row. The row
+    count is checked first so that a missing or extra row can never pass
+    unnoticed through a zip of the two lists.
+    """
+    if len(rows) != len(ref):
+        raise AssertionError("{} has {} rows but {} has {}".format(
+            label, len(rows), reflabel, len(ref)))
+    for i, (r, c) in enumerate(zip(rows, ref)):
+        for col in columns:
+            if r[col] != c[col]:
+                raise AssertionError("row {}: {} differs: {} {!r} vs {} {!r}".format(
+                    i, col, label, r[col], reflabel, c[col]))
+        if scorecol is not None:
+            diff = abs(float(r[scorecol]) - float(c[scorecol]))
+            if not diff <= tol:
+                raise AssertionError("row {}: {} differs by {:.3e} > {:.1e}: {} {} vs {} {}".format(
+                    i, scorecol, diff, tol, label, r[scorecol], reflabel, c[scorecol]))
 
 
 def reportLines(stderr):

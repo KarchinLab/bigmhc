@@ -21,13 +21,21 @@ rows that resolve to the same allele receive the same score.
 
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
+import textwrap
 import unittest
 
 import testutil
-from testutil import conversionLines, reportLines, reportedInputs, readCSV, runScript
+from testutil import (assertSameRows, checkNoRepeatedOptions, conversionLines,
+                      reportLines, reportedInputs, readCSV, runScript)
 
-FIXED = ["-d=cpu", "-j=1"]
+# Default options of every run. They go FIRST in the command line and a
+# caller sets the worker count through the jobs argument of predict(), so
+# that no option is ever given twice (runScript refuses repeated options;
+# argparse would silently keep the last one).
+DEVICE = "-d=cpu"
 
 # work/inputs/testset_alleles.csv of the change's baseline: 17 rows,
 # 13 distinct spellings, 8/9/10-mers, duplicate rows (1/8, 3/9, 7/17)
@@ -60,9 +68,37 @@ BY_EDIT_DISTANCE = ["HLA-DRB1*01:01", "XYZ123", "hla-drb1*01:01"]
 EXAMPLE1 = os.path.join(testutil.DATA, "example1.csv")
 EXAMPLE2 = os.path.join(testutil.DATA, "example2.csv")
 
+CMP_COLUMNS = ["mhc", "pep", "tgt", "len"]
+SCORE_TOL = 1e-5
 
-def scoresEqualWithin(a, b, col, tol):
-    return all([abs(float(x[col]) - float(y[col])) <= tol for x, y in zip(a, b)])
+# Runs predict.main() exactly as predict.py does, with the DataLoader
+# class replaced by a subclass that records the num_workers it was built
+# with, so that a test can prove how many workers a run really used.
+RECORD_WORKERS_DRIVER = textwrap.dedent("""
+    import sys
+    sys.path.insert(0, {src!r})
+    import torch
+    seen = list()
+    _DataLoader = torch.utils.data.DataLoader
+    class _Recording(_DataLoader):
+        def __init__(self, *args, **kwargs):
+            seen.append(kwargs.get("num_workers"))
+            super().__init__(*args, **kwargs)
+    torch.utils.data.DataLoader = _Recording
+    import predict
+    sys.argv = ["predict.py"] + {args!r}
+    predict.main()
+    print("DATALOADER_NUM_WORKERS=" + ",".join(str(n) for n in seen))
+    """)
+
+
+def predictArgs(args, out, jobs):
+    """
+    Full predict.py argument list: defaults first, caller args, output
+    """
+    args = [DEVICE, "-j={}".format(jobs)] + list(args) + ["-o=" + out]
+    checkNoRepeatedOptions(args)
+    return args
 
 
 @unittest.skipUnless(testutil.haveModels(), "models/ not found")
@@ -83,23 +119,42 @@ class PredictEndToEndTests(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
-    def predict(self, name, args):
+    def predict(self, name, args, jobs=1):
+        """
+        Runs predict.py with the default device, the given number of
+        DataLoader workers and args; returns (process, rows, output path)
+        """
         out = os.path.join(self.tmp, name + ".prd")
-        proc = runScript("predict.py", list(args) + FIXED + ["-o=" + out])
+        proc = runScript("predict.py", predictArgs(args, out, jobs))
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertTrue(os.path.exists(out))
         return proc, readCSV(out), out
+
+    def predictRecordingWorkers(self, name, args, jobs):
+        """
+        Like predict(), but through RECORD_WORKERS_DRIVER; additionally
+        returns the num_workers values the DataLoader was built with
+        """
+        out = os.path.join(self.tmp, name + ".prd")
+        code = RECORD_WORKERS_DRIVER.format(src=testutil.SRC, args=predictArgs(args, out, jobs))
+        proc = subprocess.run(
+            [sys.executable, "-c", code], cwd=testutil.SRC,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, check=False)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(os.path.exists(out))
+        marker = [l for l in proc.stdout.splitlines() if l.startswith("DATALOADER_NUM_WORKERS=")]
+        self.assertEqual(len(marker), 1, proc.stdout)
+        workers = [int(w) for w in marker[0].split("=", 1)[1].split(",")]
+        return proc, readCSV(out), out, workers
 
     def test_example1_reproduces_cmp_and_is_silent(self):
         proc, rows, _ = self.predict("example1", ["-i=" + EXAMPLE1, "-m=el", "-t=2"])
         cmp = readCSV(EXAMPLE1 + ".cmp")
         self.assertEqual(list(rows[0].keys()), list(cmp[0].keys()) + ["mhc_used"])
-        self.assertEqual(len(rows), len(cmp))
-        for r, c in zip(rows, cmp):
-            for col in ["mhc", "pep", "tgt", "len"]:
-                self.assertEqual(r[col], c[col])
-            self.assertEqual(r["mhc_used"], r["mhc"])
-        self.assertTrue(scoresEqualWithin(rows, cmp, "BigMHC_EL", 1e-5))
+        assertSameRows(rows, cmp, CMP_COLUMNS, scorecol="BigMHC_EL", tol=SCORE_TOL,
+                       label="example1.prd", reflabel="example1.csv.cmp")
+        self.assertEqual([r["mhc_used"] for r in rows], [r["mhc"] for r in rows])
         self.assertEqual(reportLines(proc.stderr), [])
 
     def test_example2_fixed_allele_reproduces_cmp_and_is_silent(self):
@@ -107,10 +162,9 @@ class PredictEndToEndTests(unittest.TestCase):
             "example2", ["-i=" + EXAMPLE2, "-m=el", "-a=HLA-A*02:02", "-p=0", "-c=0"])
         cmp = readCSV(EXAMPLE2 + ".cmp")
         self.assertEqual(list(rows[0].keys()), list(cmp[0].keys()) + ["mhc_used"])
-        for r, c in zip(rows, cmp):
-            self.assertEqual((r["mhc"], r["pep"], r["len"]), (c["mhc"], c["pep"], c["len"]))
-            self.assertEqual(r["mhc_used"], "HLA-A*02:02")
-        self.assertTrue(scoresEqualWithin(rows, cmp, "BigMHC_EL", 1e-5))
+        assertSameRows(rows, cmp, CMP_COLUMNS, scorecol="BigMHC_EL", tol=SCORE_TOL,
+                       label="example2.prd", reflabel="example2.csv.cmp")
+        self.assertEqual([r["mhc_used"] for r in rows], ["HLA-A*02:02"] * len(cmp))
         self.assertEqual(reportLines(proc.stderr), [])
 
     def test_testset_report_and_mhc_used(self):
@@ -141,12 +195,32 @@ class PredictEndToEndTests(unittest.TestCase):
         self.assertNotEqual(score[0], score[4])
 
     def test_four_workers_give_the_same_file_and_report(self):
-        proc1, rows1, out1 = self.predict("testset_j1", ["-i=" + self.testset, "-m=el", "-v=0"])
-        proc4, rows4, out4 = self.predict("testset_j4", ["-i=" + self.testset, "-m=el", "-v=0", "-j=4"])
+        """
+        The run with four DataLoader workers must really use four (the
+        DataLoader's num_workers is recorded), and its prediction file and
+        conversion report must equal those of the single-worker run.
+        """
+        args = ["-i=" + self.testset, "-m=el", "-v=0"]
+        proc1, rows1, out1, workers1 = self.predictRecordingWorkers("testset_j1", args, jobs=1)
+        proc4, rows4, out4, workers4 = self.predictRecordingWorkers("testset_j4", args, jobs=4)
+        self.assertEqual(workers1, [1])
+        self.assertEqual(workers4, [4])
         with open(out1, "rb") as f1, open(out4, "rb") as f4:
             self.assertEqual(f1.read(), f4.read())
+        self.assertEqual([r["mhc_used"] for r in rows4], [u for _, _, u in TESTSET])
+        self.assertEqual(reportedInputs(proc4.stderr), CONVERTED)
         self.assertEqual(reportLines(proc4.stderr), reportLines(proc1.stderr))
         self.assertEqual(proc4.stderr.count("input='XYZ123'"), 1)
+
+    def test_repeated_options_are_refused(self):
+        """
+        Guard against a caller option being silently overridden by a
+        default (argparse keeps the last occurrence of an option).
+        """
+        with self.assertRaises(ValueError):
+            predictArgs(["-i=" + self.testset, "-m=el", "-j=4"], os.path.join(self.tmp, "x.prd"), jobs=1)
+        with self.assertRaises(ValueError):
+            runScript("predict.py", ["-i=" + self.testset, "-m=el", "-j=4", "-d=cpu", "-j=1"])
 
     def test_fixed_shorthand_allele_reports_the_allele_used(self):
         proc, rows, _ = self.predict(
@@ -174,8 +248,9 @@ class PredictEndToEndTests(unittest.TestCase):
     def test_transfer_learning_reports_once(self):
         outdir = os.path.join(self.tmp, "tl")
         proc = runScript("train.py", [
+            DEVICE, "-j=1",
             "-i=" + self.testset_tgt, "-m=" + os.path.join(testutil.MODELS, "bat512"),
-            "-t=2", "-e=1", "-o=" + outdir] + FIXED)
+            "-t=2", "-e=1", "-o=" + outdir])
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("ep 1 loss:", proc.stdout)
         self.assertEqual(reportedInputs(proc.stderr), CONVERTED)
